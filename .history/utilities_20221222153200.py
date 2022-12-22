@@ -55,7 +55,7 @@ def prepare_phi_and_S(Nx,Ny,phi,L, convert_to_K = False):
         phiR = 0.25*np.sinh(5)+(y-0.5)**2*np.sinh(10*(y-0.5))+np.exp(2*y)
         
         if convert_to_K:
-            k = (j - 1) * Nx + i
+            k = (j - 1) * Ny + i
             phi[k] = phiR
             S[k] = phiR
         else:
@@ -72,7 +72,7 @@ def prepare_phi_and_S(Nx,Ny,phi,L, convert_to_K = False):
         phiL = 0.25*np.sinh(-5) + (y-0.5)**2*np.sinh(10*(y-0.5))+1
 
         if convert_to_K:
-            k = (j - 1) * Nx + i
+            k = (j - 1) * Ny + i
             phi[k] = phiL
             S[k] = phiL
         else:
@@ -88,7 +88,7 @@ def prepare_phi_and_S(Nx,Ny,phi,L, convert_to_K = False):
         
         phiB = 0.25*np.sinh(-5) + (x-0.5)**2*np.sinh(10*(x-0.5))+1
         if convert_to_K:
-            k = (j - 1) * Nx + i
+            k = (j - 1) * Ny + i
             phi[k] = phiB
             S[k] = phiB
         else:
@@ -106,7 +106,7 @@ def prepare_phi_and_S(Nx,Ny,phi,L, convert_to_K = False):
         phiT = 0.25*np.sinh(5)+(x-0.5)**2*np.sinh(10*(x-0.5))+np.exp(2*x)
         
         if convert_to_K:
-            k = (j - 1) * Nx + i
+            k = (j - 1) * Ny + i
             phi[k] = phiT
             S[k] = phiT
         else:
