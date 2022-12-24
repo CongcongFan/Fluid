@@ -118,6 +118,7 @@ def prepare_phi_and_S(Nx,Ny,phi,L, H, convert_to_K = False):
 
 def plot_phi(phi,phi_A,Nx,Ny,method_name,convert=False):
 
+    figsize = ((10,6))
     # If need convert phi from phi[K] to phi[i,j], aka, phi1D to phi2D
     if convert:
         # Analytical solution
@@ -131,7 +132,7 @@ def plot_phi(phi,phi_A,Nx,Ny,method_name,convert=False):
 
     # Plot        
     x,y = np.meshgrid(np.linspace(0,1,Nx),np.linspace(0,1,Ny), indexing='ij')
-    fig, ax = plt.subplots(figsize=(14,8))
+    fig, ax = plt.subplots(figsize=figsize)
     CS = ax.contour(x,y,phi, levels=np.arange(-30,30,5))
     ax.clabel(CS, inline=True, fontsize=10)
     CB = fig.colorbar(CS)
@@ -141,7 +142,7 @@ def plot_phi(phi,phi_A,Nx,Ny,method_name,convert=False):
     ax.set_title('Numerical solution by '+method_name+' iterative solver, code by Congcong Fan')
     fig.tight_layout()
 
-    fig, ax = plt.subplots(figsize=(14,8))
+    fig, ax = plt.subplots(figsize=figsize)
     ax.set_title('Analytical solution, code by Congcong Fan')
 
     CS = ax.contour(x,y,phi_A, levels=np.arange(-30,30,5))
@@ -151,17 +152,17 @@ def plot_phi(phi,phi_A,Nx,Ny,method_name,convert=False):
     ax.set_ylabel('Distance, y')
     fig.tight_layout()
 
-    # Error
-    e = error(phi_A,phi)
-    fig, ax = plt.subplots(figsize=(14,8))
-    CS = ax.contour(e,levels=np.arange(-0.14,0.14,0.02))
-    ax.clabel(CS, inline=True, fontsize=10)
-    ax.set_title('Errors, code by Congcong Fan')
-    # make a colorbar for the contour lines
-    CB = fig.colorbar(CS)
-    ax.set_xlabel('Distance, x')
-    ax.set_ylabel('Distance, y')
-    fig.tight_layout()
+    # # Error
+    # e = error(phi_A,phi)
+    # fig, ax = plt.subplots(figsize=(14,8))
+    # CS = ax.contour(e)
+    # ax.clabel(CS, inline=True, fontsize=10)
+    # ax.set_title('Errors, code by Congcong Fan')
+    # # make a colorbar for the contour lines
+    # CB = fig.colorbar(CS)
+    # ax.set_xlabel('Distance, x')
+    # ax.set_ylabel('Distance, y')
+    # fig.tight_layout()
 
 def residual(Nx,Ny,phi,S,aE,aW,aN,aS,a0):
     

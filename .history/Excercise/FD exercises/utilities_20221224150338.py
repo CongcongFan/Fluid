@@ -132,7 +132,7 @@ def plot_phi(phi,phi_A,Nx,Ny,method_name,convert=False):
     # Plot        
     x,y = np.meshgrid(np.linspace(0,1,Nx),np.linspace(0,1,Ny), indexing='ij')
     fig, ax = plt.subplots(figsize=(14,8))
-    CS = ax.contour(x,y,phi, levels=np.arange(-30,30,5))
+    CS = ax.contour(x,y,phi)
     ax.clabel(CS, inline=True, fontsize=10)
     CB = fig.colorbar(CS)
     ax.set_xlabel('Distance, x')
@@ -144,7 +144,7 @@ def plot_phi(phi,phi_A,Nx,Ny,method_name,convert=False):
     fig, ax = plt.subplots(figsize=(14,8))
     ax.set_title('Analytical solution, code by Congcong Fan')
 
-    CS = ax.contour(x,y,phi_A, levels=np.arange(-30,30,5))
+    CS = ax.contour(x,y,phi_A)
     ax.clabel(CS, inline=True, fontsize=10)
     CB = fig.colorbar(CS)
     ax.set_xlabel('Distance, x')
@@ -154,7 +154,7 @@ def plot_phi(phi,phi_A,Nx,Ny,method_name,convert=False):
     # Error
     e = error(phi_A,phi)
     fig, ax = plt.subplots(figsize=(14,8))
-    CS = ax.contour(e,levels=np.arange(-0.14,0.14,0.02))
+    CS = ax.contour(e)
     ax.clabel(CS, inline=True, fontsize=10)
     ax.set_title('Errors, code by Congcong Fan')
     # make a colorbar for the contour lines

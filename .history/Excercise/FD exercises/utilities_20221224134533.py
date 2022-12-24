@@ -27,7 +27,7 @@ def prepare_phi_and_S(Nx,Ny,phi,L, H, convert_to_K = False):
     else:   
         S = np.zeros((Nx,Ny))
     dx = L/(Nx-1)    # Grid size
-    dy = H/(Ny-1)    # Grid size
+    dy = L/(Ny-1)    # Grid size
     # RHS source terms
     for i in range(Nx):
         for j in range(Ny):

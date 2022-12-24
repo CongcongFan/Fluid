@@ -151,17 +151,17 @@ def plot_phi(phi,phi_A,Nx,Ny,method_name,convert=False):
     ax.set_ylabel('Distance, y')
     fig.tight_layout()
 
-    # Error
-    e = error(phi_A,phi)
-    fig, ax = plt.subplots(figsize=(14,8))
-    CS = ax.contour(e,levels=np.arange(-0.14,0.14,0.02))
-    ax.clabel(CS, inline=True, fontsize=10)
-    ax.set_title('Errors, code by Congcong Fan')
-    # make a colorbar for the contour lines
-    CB = fig.colorbar(CS)
-    ax.set_xlabel('Distance, x')
-    ax.set_ylabel('Distance, y')
-    fig.tight_layout()
+    # # Error
+    # e = error(phi_A,phi)
+    # fig, ax = plt.subplots(figsize=(14,8))
+    # CS = ax.contour(e)
+    # ax.clabel(CS, inline=True, fontsize=10)
+    # ax.set_title('Errors, code by Congcong Fan')
+    # # make a colorbar for the contour lines
+    # CB = fig.colorbar(CS)
+    # ax.set_xlabel('Distance, x')
+    # ax.set_ylabel('Distance, y')
+    # fig.tight_layout()
 
 def residual(Nx,Ny,phi,S,aE,aW,aN,aS,a0):
     
