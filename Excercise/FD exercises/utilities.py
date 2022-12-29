@@ -178,3 +178,50 @@ def residual(Nx,Ny,phi,S,aE,aW,aN,aS,a0):
     
     return R2sum, R
 
+
+def matrixA(Nx,Ny,dx,dy):
+    A = np.zeros((Nx ** 2, Ny ** 2))
+
+    ## Right BC
+    i = Nx - 1
+    for j in range(Ny):
+        x = i * dx
+        y = j * dy
+
+        k = (j - 1) * Ny + i
+        A[k, k] = 1
+
+    ## left BC
+    i = 0
+    for j in range(Ny):
+        x = i * dx
+        y = j * dy
+        k = (j - 1) * Ny + i
+        A[k, k] = 1
+    ## Bottom BC
+    j = 0
+    for i in range(Nx):
+        x = i * dx
+        y = j * dy
+        k = (j - 1) * Ny + i
+        A[k, k] = 1
+    ## Top BC
+    j = Ny - 1
+    for i in range(Nx):
+        x = i * dx
+        y = j * dy
+        k = (j - 1) * Ny + i
+        A[k, k] = 1
+
+    for i in range(1, Nx - 1):
+
+        for j in range(1, Ny - 1):
+            k = (j - 1) * Ny + i
+            A[k, k] = -2 / dx ** 2 - 2 / dy ** 2
+            A[k, k - 1] = 1 / dx ** 2
+            A[k, k + 1] = 1 / dx ** 2
+
+            A[k, k - Nx] = 1 / dy ** 2
+            A[k, k + Nx] = 1 / dy ** 2
+
+    return A

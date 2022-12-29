@@ -5,15 +5,10 @@ from IPython.display import clear_output
 import time
 plt.rcParams.update({'font.size': 14})
 
-from utilities import convert2D_to_1D, error, prepare_phi_and_S, convert1D_to_2D, plot_phi,residual, matrixA, forward_substitution, backward_substitution
+from utilities import convert2D_to_1D, error, prepare_phi_and_S, convert1D_to_2D, plot_phi,residual, matrixA
 
 
 def NZA(A):
-    """
-
-    :param A: Banded Matrix A
-    :return: Sparsity pattern, if the element is not zero, at the index of that element, NZA[i, j] = 1
-    """
     NZA = np.zeros(A.shape)
     for i in range(A.shape[0]):
         for j in range(A.shape[1]):
@@ -24,12 +19,6 @@ def NZA(A):
 
 
 def ILU0(NZA, A):
-    """
-
-    :param NZA: Sparsity pattern
-    :param A: Banded Matrix A
-    :return: Decomposed matrix A --> [L] [U] = [A]
-    """
     L = np.zeros(NZA.shape)
     U = np.zeros(NZA.shape)
     K = NZA.shape[0]
@@ -55,14 +44,10 @@ def ILU0(NZA, A):
 
 
 def matmul_between_transpose_and_normal(mat1, mat2, N, M):
-    """
-
-    :param mat1: the matrix that will be transposed
-    :param mat2: normal matrix
-    :param N: The number of grid in x-axis
-    :param M: The number of grid in y-axis
-    :return: A scalar: [mat1].T @ [mat2]
-    """
+    # mat1 is the matrix that will be transposed
+    # mat2 is normal matrix
+    # this function computes [mat1].T @ [mat2]
+    # return a scalar
     output = 0
     for i in range(1, N - 1):
         for j in range(1, M - 1):
@@ -72,19 +57,19 @@ def matmul_between_transpose_and_normal(mat1, mat2, N, M):
     return output
 
 
-def Compute_Rm(L, U, R):
-    """
+def Compute_Rm(L, U, Nx, Ny, R):
+    '''
     [ M ] [ Rm ] = [ R ]
     [ M ] = [ L ] [ U ]
     [ L ] [ U ] [ Rm ] = [ R ]
     [ U ] [ Rm ] = [ Y ]
     [ L ] [ Y ] = [ R ]
-
+    '''
     # Compute above steps from last eqn to top eqn without using matrix
-    """
-    Y = backward_substitution(L, R)
 
-    Rm = forward_substitution(U, Y)
+    Y = matmul_between_transpose_and_normal(L, R, Nx, Ny)
+
+    Rm = matmul_between_transpose_and_normal(U, Y, Nx, Ny)
     return Rm
 
 tart = time.time()
@@ -106,27 +91,27 @@ aN = 1 / dy ** 2
 aS = 1 / dy ** 2
 a0 = -(2 / dx ** 2 + 2 / dy ** 2)
 
-phi, S = prepare_phi_and_S(Nx,Ny,phi,Length, Height,convert_to_K=True)
+phi, S = prepare_phi_and_S(Nx,Ny,phi,Length, Height,convert_to_K=False)
 
 A = matrixA(Nx,Ny,dx,dy)
 nza = NZA(A)
 L, U = ILU0(nza, A)
-L = convert2D_to_1D(L, Nx,Ny)
-U = convert2D_to_1D(U, Nx,Ny)
+# L = convert2D_to_1D(L, Nx,Ny)
+# U = convert2D_to_1D(U, Nx,Ny)
 
 # Initial residual
 R = S - A @ phi
 R2sum_old = 0
-for i in range(Nx):
+for i in range(1,Nx-1):
 
-    for j in range(Ny):
+    for j in range(1,Ny-1):
         k = (j - 1) * Nx + i
         R2sum_old = R2sum_old + R[k] ** 2
 
 R2_old = np.sqrt(R2sum_old)
 
 # Modified residual Rm
-Rm = np.linalg.inv([ L @ U ]) @ R
+Rm = Compute_Rm(L, U, Nx, Ny, R)
 
 # Step 3: Set the initial search direction vector equal to the residual vector
 D = Rm
@@ -145,14 +130,12 @@ for _ in tqdm(range(100000)):
     R2_new = np.sqrt(R2sum_new)
 
     # Compute new modified residual
-    Rm_new = np.linalg.inv([ L @ U ]) @ R
+    Rm_new = Compute_Rm(L, U, Nx, Ny, R)
 
     # Compute Beta, beta = [ { R_new.T } @ {Rm_new} ]/ [ { R_old.T } @ {Rm_old} ]
-    # num = matmul_between_transpose_and_normal(R_new, Rm_new, Nx, Ny)
-    # den = matmul_between_transpose_and_normal(R, Rm, Nx, Ny)
+    num = matmul_between_transpose_and_normal(R_new, Rm_new, Nx, Ny)
+    den = matmul_between_transpose_and_normal(R, Rm, Nx, Ny)
 
-    num = R_new.T@Rm_new
-    den = R.T @ Rm
     beta = num / den
 
     # Update search direction vector
