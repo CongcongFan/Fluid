@@ -3,9 +3,11 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from IPython.display import clear_output
 import time
+
 plt.rcParams.update({'font.size': 14})
 
-from utilities import convert2D_to_1D, error, prepare_phi_and_S, convert1D_to_2D, plot_phi,residual, matrixA, forward_substitution, backward_substitution
+from utilities import convert2D_to_1D, error, prepare_phi_and_S, convert1D_to_2D, plot_phi, residual, matrixA, \
+    forward_substitution, backward_substitution
 
 
 def NZA(A):
@@ -23,14 +25,14 @@ def NZA(A):
     return NZA
 
 
-def ILU0(NZA, A):
+def ILU0(NZA, AA):
     """
 
     :param NZA: Sparsity pattern
-    :param A: Banded Matrix A
+    :param AA: Banded Matrix A
     :return: Decomposed matrix A --> [L] [U] = [A]
     """
-    L = np.zeros(NZA.shape)
+    L = np.eye(NZA.shape[0])
     U = np.zeros(NZA.shape)
     K = NZA.shape[0]
 
@@ -38,18 +40,18 @@ def ILU0(NZA, A):
         for i in range(k, K):
 
             if NZA[i, k] == 1:
-                A[i, k] = A[i, k] / A[k, k]
+                AA[i, k] = AA[i, k] / AA[k, k]
 
             for j in range(k, K):
                 if NZA[i, j] == 1:
-                    A[i, j] = A[i, j] + A[i, k] * A[k, j]
+                    AA[i, j] = AA[i, j] + AA[i, k] * AA[k, j]
 
     for i in range(K):
         for j in range(i, K):
-            U[i, j] = A[i, j]
+            U[i, j] = AA[i, j]
 
-        for j in range(i - 1):
-            L[i, j] = A[i, j]
+        for j in range(i):
+            L[i, j] = AA[i, j]
 
     return L, U
 
@@ -85,15 +87,18 @@ def Compute_Rm(L, U, R):
     Y = backward_substitution(L, R)
 
     Rm = forward_substitution(U, Y)
+    # Y = scipy.sparse.linalg.spsolve_triangular(L, R, lower=True)
+    # Rm = scipy.sparse.linalg.spsolve_triangular(U, Y, lower=False)
+
     return Rm
 
-tart = time.time()
-Nx = 21
-Ny = 21
+
+start = time.time()
+Nx = 11
+Ny = 11
 Length = 1  # length
 Height = 1
-phi = np.zeros((Nx*Ny))
-S = np.zeros((Nx*Ny))
+phi = np.zeros((Nx * Ny))
 
 dx = Length / (Nx - 1)  # Grid size
 dy = Height / (Ny - 1)  # Grid size
@@ -106,66 +111,84 @@ aN = 1 / dy ** 2
 aS = 1 / dy ** 2
 a0 = -(2 / dx ** 2 + 2 / dy ** 2)
 
-phi, S = prepare_phi_and_S(Nx,Ny,phi,Length, Height,convert_to_K=True)
+# Same coefficient name as Stone's method
+K = Nx * Ny
+B = np.full(K, aS)
+D = np.full(K, aW)
+E = np.full(K, a0)
+F = np.full(K, aE)
+H = np.full(K, aN)
 
-A = matrixA(Nx,Ny,dx,dy)
-nza = NZA(A)
-L, U = ILU0(nza, A)
-L = convert2D_to_1D(L, Nx,Ny)
-U = convert2D_to_1D(U, Nx,Ny)
+phi, S = prepare_phi_and_S(Nx, Ny, phi, Length, Height, convert_to_K=True)
+
+A = matrixA(Nx, Ny, dx, dy)
+AA = np.copy(A)
+nza = NZA(AA)
+L, U = ILU0(nza, AA)
+# L = convert2D_to_1D(L, Nx, Ny)
+# U = convert2D_to_1D(U, Nx, Ny)
+
+# import scipy
+# decomposition = scipy.sparse.linalg.spilu(A)
+# L = decomposition.L
+# U = decomposition.U
 
 # Initial residual
-R = S - A @ phi
-R2sum_old = 0
-for i in range(Nx):
-
-    for j in range(Ny):
-        k = (j - 1) * Nx + i
-        R2sum_old = R2sum_old + R[k] ** 2
-
-R2_old = np.sqrt(R2sum_old)
+R2_old, Rsum_old, R_old = residual(Nx, Ny, phi, S, aE, aW, aN, aS, a0, convert=True)
 
 # Modified residual Rm
-Rm = np.linalg.inv([ L @ U ]) @ R
+Rm_old = Compute_Rm(L, U, R_old)
 
 # Step 3: Set the initial search direction vector equal to the residual vector
-D = Rm
+D0 = Rm_old
 
 for _ in tqdm(range(100000)):
 
     # Compute new alpha
+    # Compute A@D
+    ad = np.zeros(Nx * Ny)
+    for i in range(1, Nx - 1):
+        for j in range(1, Ny - 1):
+            k = (j - 1) * Nx + i
+            # k = K-1
 
-    alpha_new = R.T @ R / (D.T @ A @ D)
+            ad[k] = E[k] * D0[k] + F[k] * D0[k + 1] + H[k] * D0[k + Nx] + D[k] * D0[k - 1] + B[k] * D0[k - Nx]
 
-    phi = phi + alpha_new * D
+    Dt_ad = 0
+    for k in range(Nx*Ny):
+        Dt_ad = Dt_ad + D0[k] * ad[k]
+
+    alpha_new = Rsum_old / Dt_ad
+
+    phi = phi + alpha_new * D0
 
     # Compute residual
-    R2sum_new, R_new = residual(Nx, Ny, phi, S, aE, aW, aN, aS, a0)
+    R2_new, Rsum_new, R_new = residual(Nx, Ny, phi, S, aE, aW, aN, aS, a0, convert=True)
 
-    R2_new = np.sqrt(R2sum_new)
 
     # Compute new modified residual
-    Rm_new = np.linalg.inv([ L @ U ]) @ R
+    Rm_new = Compute_Rm(L, U, R_new)
 
     # Compute Beta, beta = [ { R_new.T } @ {Rm_new} ]/ [ { R_old.T } @ {Rm_old} ]
-    # num = matmul_between_transpose_and_normal(R_new, Rm_new, Nx, Ny)
-    # den = matmul_between_transpose_and_normal(R, Rm, Nx, Ny)
-
-    num = R_new.T@Rm_new
-    den = R.T @ Rm
+    num = matmul_between_transpose_and_normal(R_new, Rm_new, Nx, Ny)
+    den = matmul_between_transpose_and_normal(R_old, Rm_old, Nx, Ny)
+    #
+    # num = R_new.T @ Rm_new
+    # den = R.T @ Rm
     beta = num / den
 
     # Update search direction vector
-    D = Rm_new + beta * D
+    D0 = Rm_new + beta * D0
 
     # Update old residual vector
+    Rsum_old = Rsum_new
     R2_old = R2_new
-    R = R_new
-    Rm = Rm_new
+    R_old = R_new
+    Rm_old = Rm_new
 
     if _ % 100 == 0:
         clear_output(True)
-        print(f'alpha: {beta}')
+        print(f'alpha: {alpha_new}')
         print("Residual: ", R2_new)
 
     if R2_new < tol:

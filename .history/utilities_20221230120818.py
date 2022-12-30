@@ -257,10 +257,10 @@ def matrixA(Nx, Ny, dx, dy):
             A[k, k + 1] = 1 / dx ** 2
 
             
-            if k>Nx:
+            if k>=Nx:
                 A[k, k - Nx] = 1 / dy ** 2
             A[k, k + Nx] = 1 / dy ** 2
-    # plt.spy(A)
+    plt.spy(A)
     return A
 
 
