@@ -37,12 +37,12 @@ def ILU0(NZA, AA):
     K = NZA.shape[0]
 
     for k in tqdm(range(K - 1)):
-        for i in range(k, K):
+        for i in range(k+1, K):
 
             if NZA[i, k] == 1:
                 AA[i, k] = AA[i, k] / AA[k, k]
 
-            for j in range(k, K):
+            for j in range(k+1, K):
                 if NZA[i, j] == 1:
                     AA[i, j] = AA[i, j] + AA[i, k] * AA[k, j]
 
@@ -84,12 +84,13 @@ def Compute_Rm(L, U, R):
 
     # Compute above steps from last eqn to top eqn without using matrix
     """
-    Y = backward_substitution(L, R)
-
-    Rm = forward_substitution(U, Y)
+    # Y = backward_substitution(L, R)
+    #
+    # Rm = forward_substitution(U, Y)
     # Y = scipy.sparse.linalg.spsolve_triangular(L, R, lower=True)
     # Rm = scipy.sparse.linalg.spsolve_triangular(U, Y, lower=False)
-
+    Y = np.linalg.inv(L) @ R
+    Rm = np.linalg.inv(U) @Y
     return Rm
 
 
