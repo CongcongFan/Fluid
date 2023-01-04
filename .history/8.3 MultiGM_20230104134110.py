@@ -116,7 +116,8 @@ for l in tqdm(range(10000)):
 
     # Again, use GS to partial solve [A3][𝜙3'] = [R_3<-2]
     phi3 = np.zeros((Nx3, Ny3))
-    phi3 = GS(Nx3, Ny3, phi3, R_3_new, aE3, aW3, aE3, aS3, a03)
+    for _ in range(30):
+        phi3 = GS(Nx3, Ny3, phi3, R_3_new, aE3, aW3, aE3, aS3, a03)
 
     # Compute [R_3] = [R_3<-2] - [A3][𝜙'3]
     R2_3, _, R_3_new = residual(Nx3, Ny3, phi3, R_3_new, aE3, aW3, aN3, aS3, a03, convert=False)

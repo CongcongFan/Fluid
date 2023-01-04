@@ -4,6 +4,7 @@ from tqdm import tqdm
 from IPython.display import clear_output
 import time
 from scipy import interpolate
+
 plt.rcParams.update({'font.size': 14})
 
 
@@ -42,7 +43,7 @@ def prepare_phi_and_S(Nx, Ny, phi, L, H, convert_to_K=False):
         phi = np.zeros((Nx * Ny))
     else:
         S = np.zeros((Nx, Ny))
-        phi = np.zeros((Nx , Ny))
+        phi = np.zeros((Nx, Ny))
     dx = L / (Nx - 1)  # Grid size
     dy = H / (Ny - 1)  # Grid size
     # RHS source terms
@@ -224,11 +225,11 @@ def residual(Nx, Ny, phi, S, aE, aW, aN, aS, a0, convert=False):
 def matrixA(Nx, Ny, dx, dy):
     A = np.zeros((Nx ** 2, Ny ** 2))
     ## Right BC
-    i = Nx-1
+    i = Nx - 1
     for j in range(Ny):
         k = (j - 1) * Nx + i
         A[k, k] = 1
-        
+
     ## left BC
     i = 0
     for j in range(Ny):
@@ -239,25 +240,24 @@ def matrixA(Nx, Ny, dx, dy):
     for i in range(Nx):
         k = (j - 1) * Nx + i
         A[k, k] = 1
-        
+
     ## Top BC
     j = Ny - 1
     for i in range(Nx):
         k = (j - 1) * Nx + i
         A[k, k] = 1
-        
-    for i in range(1, Nx-1):
 
-        for j in range(1, Ny-1):
-            k = (j -1) * Nx + i
-            if k<0:
-                print(i,j,k)
+    for i in range(1, Nx - 1):
+
+        for j in range(1, Ny - 1):
+            k = (j - 1) * Nx + i
+            if k < 0:
+                print(i, j, k)
             A[k, k] = -2 / dx ** 2 - 2 / dy ** 2
             A[k, k - 1] = 1 / dx ** 2
             A[k, k + 1] = 1 / dx ** 2
 
-            
-            if k>Nx:
+            if k > Nx:
                 A[k, k - Nx] = 1 / dy ** 2
             A[k, k + Nx] = 1 / dy ** 2
     # plt.spy(A)
@@ -292,43 +292,57 @@ def forward_substitution(A, b):
     n = len(b)
     x = np.zeros_like(b)
     for i in range(n):
-        x[i] = (b[i] - np.dot(A[i, :i], x[:i])) 
+        x[i] = (b[i] - np.dot(A[i, :i], x[:i]))
 
     return x
 
-def GS(Nx,Ny,phi,S,aE,aW,aN,aS,a0):
-    for i in range(1,Nx-1):
-            for j in range(1,Ny-1):
 
-                # Gauss-Siedel Update
-                phi[i,j] = (S[i,j] - aE*phi[i+1,j] - aW*phi[i-1,j] - aN*phi[i,j+1] - aS*phi[i,j-1]) / a0
+def GS(Nx, Ny, phi, S, aE, aW, aN, aS, a0):
+    for i in range(1, Nx - 1):
+        for j in range(1, Ny - 1):
+            # Gauss-Siedel Update
+            phi[i, j] = (S[i, j] - aE * phi[i + 1, j] - aW * phi[i - 1, j] - aN * phi[i, j + 1] - aS * phi[
+                i, j - 1]) / a0
     return phi
 
-def smoothing(Nx, Ny, phi, S, aE, aW, aN, aS, a0, x_list1, y_list1, x_list2, y_list2):
 
+def smoothing(Nx, Ny, phi, S, aE, aW, aN, aS, a0):
+
+    # One GS sweep on fine mesh
     phi = GS(Nx, Ny, phi, S, aE, aW, aN, aS, a0)
 
     R2, _, R = residual(Nx, Ny, phi, S, aE, aW, aN, aS, a0, convert=False)
 
-    # Transfer Residual to corse mesh
-    # Since in current 2 mesh size, there is always a corse mesh sitting on the top of fine mesh
-    f = interpolate.RectBivariateSpline(x_list1, y_list1, R)
-    R = f(x_list2, y_list2)
-
     return R2, R
 
-def restriction(Nx, Ny, phi, Rc_new, aEc, aWc, aNc, aSc, a0c, x_list1, y_list1, x_list2, y_list2):
-    phi = np.zeros((Nx, Ny))
-    
+
+def restriction(Nx, Ny, R1, aEc, aWc, aNc, aSc, a0c, x_list1, y_list1, x_list2, y_list2, multi_sweep=None):
+
+    # Transfer Residual to coarse mesh
+    f = interpolate.RectBivariateSpline(x_list1, y_list1, R1)
+    R2 = f(x_list2, y_list2)
+
     # Smoothing the errors on the coarse mesh
-    # Use the correction form [A'][phi'] = [R] to calculate the correction form of phi
- 
-    phi = GS(Nx, Ny, phi, Rc_new, aEc, aWc, aNc, aSc, a0c)
-    # phi += corrector
-    R2c, _, R = residual(Nx, Ny, phi, Rc_new, aEc, aWc, aNc, aSc, a0c, convert=False)
+    # Use the correction form [A][𝜙'] = [R] to calculate the correction form of phi
+    phi_corrector = np.zeros((Nx, Ny))
 
-    # Transfer the correction form of phi at coarse mesh to finer mesh
+    if multi_sweep:
+        sweeps = multi_sweep
+    else:
+        sweeps = 1
 
-    f = interpolate.RectBivariateSpline(x_list2, y_list2, phi)
-    phif_corrector = f(x_list1, y_list1)
-    return phif_corrector, R2c, R
+    for _ in range(sweeps):
+        phi_corrector = GS(Nx, Ny, phi_corrector, R2, aEc, aWc, aNc, aSc, a0c)
+    R2c, _, R = residual(Nx, Ny, phi_corrector, R2, aEc, aWc, aNc, aSc, a0c, convert=False)
+
+    return phi_corrector,R2c, R
+
+
+def prolongation(xc_list, yc_list, phic, xf_list, yf_list, phif):
+
+    # Transfer the correction form of 𝜙 from coarse mesh to finer mesh
+    f = interpolate.RectBivariateSpline(xc_list, yc_list, phic)
+    phi2_corrector = f(xf_list, yf_list)
+    phif = phif + phi2_corrector
+
+    return phif
