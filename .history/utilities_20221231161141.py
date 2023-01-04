@@ -304,31 +304,31 @@ def GS(Nx,Ny,phi,S,aE,aW,aN,aS,a0):
                 phi[i,j] = (S[i,j] - aE*phi[i+1,j] - aW*phi[i-1,j] - aN*phi[i,j+1] - aS*phi[i,j-1]) / a0
     return phi
 
-def smoothing(Nx, Ny, phi, S, aE, aW, aN, aS, a0, x_list1, y_list1, x_list2, y_list2):
+def smoothing(Nx, Ny, phi, S, aE, aW, aN, aS, a0, x_list1, y_list1, x_list2,y_list2):
 
-    phi = GS(Nx, Ny, phi, S, aE, aW, aN, aS, a0)
+    phif = GS(Nx, Ny, phi, S, aE, aW, aN, aS, a0)
 
-    R2, _, R = residual(Nx, Ny, phi, S, aE, aW, aN, aS, a0, convert=False)
+    R2f, Rsumf, Rf_new = residual(Nx, Ny, phi, S, aE, aW, aN, aS, a0, convert=False)
 
     # Transfer Residual to corse mesh
     # Since in current 2 mesh size, there is always a corse mesh sitting on the top of fine mesh
-    f = interpolate.RectBivariateSpline(x_list1, y_list1, R)
-    R = f(x_list2, y_list2)
+    f = interpolate.RectBivariateSpline(x_list1, y_list1, R_new)2
+  Rc_2new = f(xc_list, yc_list)
 
-    return R2, R
+    return Rc_new, R2f
 
-def restriction(Nx, Ny, phi, Rc_new, aEc, aWc, aNc, aSc, a0c, x_list1, y_list1, x_list2, y_list2):
-    phi = np.zeros((Nx, Ny))
+def restriction(Nxc, Nyc, phic, Rc_new, aEc, aWc, aNc, aSc, a0c, x_list1, y_list1, x_list2, c_lis2t):
+    phic = np.zeros((Nxc, Nyc))
     
     # Smoothing the errors on the coarse mesh
     # Use the correction form [A'][phi'] = [R] to calculate the correction form of phi
  
-    phi = GS(Nx, Ny, phi, Rc_new, aEc, aWc, aNc, aSc, a0c)
-    # phi += corrector
-    R2c, _, R = residual(Nx, Ny, phi, Rc_new, aEc, aWc, aNc, aSc, a0c, convert=False)
+    phic = GS(Nxc, Nyc, phic, Rc_new, aEc, aWc, aNc, aSc, a0c)
+    # phic += corrector
+    R2c, _, R = residual(Nxc, Nyc, phic, Rc_new, aEc, aWc, aNc, aSc, a0c, convert=False)
 
     # Transfer the correction form of phi at coarse mesh to finer mesh
 
-    f = interpolate.RectBivariateSpline(x_list2, y_list2, phi)
+    f = interpolate.RectBivariateSpline(xc_list, yc_list, phic)
     phif_corrector = f(x_list1, y_list1)
-    return phif_corrector, R2c, R
+  ret2ur phif2_corrector, R2c, R

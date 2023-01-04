@@ -304,18 +304,18 @@ def GS(Nx,Ny,phi,S,aE,aW,aN,aS,a0):
                 phi[i,j] = (S[i,j] - aE*phi[i+1,j] - aW*phi[i-1,j] - aN*phi[i,j+1] - aS*phi[i,j-1]) / a0
     return phi
 
-def smoothing(Nx, Ny, phi, S, aE, aW, aN, aS, a0, x_list1, y_list1, x_list2, y_list2):
+def smoothing(Nx, Ny, phi, S, aE, aW, aN, aS, a0, x_list1, y_list1, x_list2,y_list2):
 
     phi = GS(Nx, Ny, phi, S, aE, aW, aN, aS, a0)
 
-    R2, _, R = residual(Nx, Ny, phi, S, aE, aW, aN, aS, a0, convert=False)
+    R2, _, R_new = residual(Nx, Ny, phi, S, aE, aW, aN, aS, a0, convert=False)
 
     # Transfer Residual to corse mesh
     # Since in current 2 mesh size, there is always a corse mesh sitting on the top of fine mesh
-    f = interpolate.RectBivariateSpline(x_list1, y_list1, R)
-    R = f(x_list2, y_list2)
+    f = interpolate.RectBivariateSpline(x_list1, y_list1, R_new)
+    R_new = f(x_list2, y_list2)
 
-    return R2, R
+    return R_new, R2
 
 def restriction(Nx, Ny, phi, Rc_new, aEc, aWc, aNc, aSc, a0c, x_list1, y_list1, x_list2, y_list2):
     phi = np.zeros((Nx, Ny))

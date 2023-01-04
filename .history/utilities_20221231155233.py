@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from IPython.display import clear_output
 import time
-from scipy import interpolate
+
 plt.rcParams.update({'font.size': 14})
 
 
@@ -304,31 +304,15 @@ def GS(Nx,Ny,phi,S,aE,aW,aN,aS,a0):
                 phi[i,j] = (S[i,j] - aE*phi[i+1,j] - aW*phi[i-1,j] - aN*phi[i,j+1] - aS*phi[i,j-1]) / a0
     return phi
 
-def smoothing(Nx, Ny, phi, S, aE, aW, aN, aS, a0, x_list1, y_list1, x_list2, y_list2):
+def smoothing(Nxf, Nyf, phif, Sf, aEf, aWf, aNf, aSf, a0f):
 
-    phi = GS(Nx, Ny, phi, S, aE, aW, aN, aS, a0)
+    phif = GS(Nxf, Nyf, phif, Sf, aEf, aWf, aNf, aSf, a0f)
 
-    R2, _, R = residual(Nx, Ny, phi, S, aE, aW, aN, aS, a0, convert=False)
+    R2f, Rsumf, Rf_new = residual(Nxf, Nyf, phif, Sf, aEf, aWf, aNf, aSf, a0f, convert=False)
 
     # Transfer Residual to corse mesh
     # Since in current 2 mesh size, there is always a corse mesh sitting on the top of fine mesh
-    f = interpolate.RectBivariateSpline(x_list1, y_list1, R)
-    R = f(x_list2, y_list2)
+    f = interpolate.RectBivariateSpline(xf_list, yf_list, Rf_new)
+    Rc_new = f(xc_list, yc_list)
 
-    return R2, R
-
-def restriction(Nx, Ny, phi, Rc_new, aEc, aWc, aNc, aSc, a0c, x_list1, y_list1, x_list2, y_list2):
-    phi = np.zeros((Nx, Ny))
-    
-    # Smoothing the errors on the coarse mesh
-    # Use the correction form [A'][phi'] = [R] to calculate the correction form of phi
- 
-    phi = GS(Nx, Ny, phi, Rc_new, aEc, aWc, aNc, aSc, a0c)
-    # phi += corrector
-    R2c, _, R = residual(Nx, Ny, phi, Rc_new, aEc, aWc, aNc, aSc, a0c, convert=False)
-
-    # Transfer the correction form of phi at coarse mesh to finer mesh
-
-    f = interpolate.RectBivariateSpline(x_list2, y_list2, phi)
-    phif_corrector = f(x_list1, y_list1)
-    return phif_corrector, R2c, R
+    return R2f, Rsumf, Rf_new 

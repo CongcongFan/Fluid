@@ -312,10 +312,10 @@ def smoothing(Nx, Ny, phi, S, aE, aW, aN, aS, a0, x_list1, y_list1, x_list2, y_l
 
     # Transfer Residual to corse mesh
     # Since in current 2 mesh size, there is always a corse mesh sitting on the top of fine mesh
-    f = interpolate.RectBivariateSpline(x_list1, y_list1, R)
+    f = interpolate.RectBivariateSpline(x_list1, y_list1, R_new)
     R = f(x_list2, y_list2)
 
-    return R2, R
+    return R
 
 def restriction(Nx, Ny, phi, Rc_new, aEc, aWc, aNc, aSc, a0c, x_list1, y_list1, x_list2, y_list2):
     phi = np.zeros((Nx, Ny))
