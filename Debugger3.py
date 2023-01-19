@@ -1,72 +1,257 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import numpy as np
-import matplotlib.pyplot as plt
 from tqdm import tqdm
 from IPython.display import clear_output
 import time
-from scipy import interpolate
+from utilities import plot_phi
 plt.rcParams.update({'font.size': 14})
 
-from utilities import error, prepare_phi_and_S, convert1D_to_2D, plot_phi,residual,smoothing, restriction
+def prepare_phi_and_S(Nx, Ny, phi, L, H, convert_to_K=False):
+    # Generate RHS source terms matrix and unknowns 'phi' with Dirichlet BCs
+    if convert_to_K:
+        S = np.zeros((Nx * Ny))
+        phi = np.zeros((Nx * Ny))
+    else:
+        S = np.zeros((Nx, Ny))
+        phi = np.zeros((Nx, Ny))
+    dx = L / (Nx - 1)  # Grid size
+    dy = H / (Ny - 1)  # Grid size
+    # RHS source terms
+    for i in range(Nx):
+        for j in range(Ny):
+            x = i * dx
+            y = j * dy
+
+            source = 1000*(2*np.sinh(x-0.5) + 4*(x-0.5)*np.cosh(x-0.5) + (x-0.5)**2 * np.sinh(x-0.5))
+            + 1000*(2*np.sinh(y-0.5) + 4*(y-0.5)*np.cosh(y-0.5) + (y-0.5)**2 * np.sinh(y-0.5))
+
+            if convert_to_K:
+                k = (j - 1) * Nx + i
+                S[k] = source
+            else:
+                S[i, j] = source
+
+    ## Right BC
+    i = Nx - 1
+    for j in range(1, Ny - 1):
+
+        x = i * dx
+        y = j * dy
+        phiR = 1000 * (0.25*np.sinh(0.5) + (y-0.5)**2*np.sinh(y-0.5))
+
+        if convert_to_K:
+            k = (j - 1) * Nx + i
+            phi[k] = phiR
+            S[k] = phiR
+        else:
+            phi[i, j] = phiR
+            S[i, j] = phiR
+
+    ## left BC
+    i = 0
+    for j in range(1, Ny - 1):
+
+        x = i * dx
+        y = j * dy
+
+        phiL = 1000 * (0.25*np.sinh(-0.5) + (y-0.5)**2*np.sinh(y-0.5))
+
+        if convert_to_K:
+            k = (j - 1) * Nx + i
+            phi[k] = phiL
+            S[k] = phiL
+        else:
+            phi[i, j] = phiL
+            S[i, j] = phiL
+
+            ## Bottom BC
+    j = 0
+    for i in range(Nx):
+
+        x = i * dx
+        y = j * dy
+
+        phiB = 1000 * (0.25*np.sinh(-0.5) + (x-0.5)**2*np.sinh(x-0.5))
+        if convert_to_K:
+            k = (j - 1) * Nx + i
+            phi[k] = phiB
+            S[k] = phiB
+        else:
+            phi[i, j] = phiB
+            S[i, j] = phiB
+
+    ## Top BC
+    j = Ny - 1
+    for i in range(Nx):
+
+        x = i * dx
+        y = j * dy
+
+        phiT = 1000 * (0.25*np.sinh(0.5) + (x-0.5)**2*np.sinh(x-0.5))
+
+        if convert_to_K:
+            k = (j - 1) * Nx + i
+            phi[k] = phiT
+            S[k] = phiT
+        else:
+            phi[i, j] = phiT
+            S[i, j] = phiT
+
+    return phi, S
+
+
+def applyBC(phi, Nx,Ny,S,L,H,convert_to_K = False):
+    ## Right BC
+    dx = L / (Nx - 1)  # Grid size
+    dy = H / (Ny - 1)  # Grid size
+
+    i = Nx - 1
+    for j in range(1, Ny - 1):
+
+        x = i * dx
+        y = j * dy
+        phiR = 1000 * (0.25*np.sinh(0.5) + (y-0.5)**2*np.sinh(y-0.5))
+
+        if convert_to_K:
+            k = (j - 1) * Nx + i
+            phi[k] = phiR
+            S[k] = phiR
+        else:
+            phi[i, j] = phiR
+            S[i, j] = phiR
+
+    ## left BC
+    i = 0
+    for j in range(1, Ny - 1):
+
+        x = i * dx
+        y = j * dy
+
+        phiL = 1000 * (0.25*np.sinh(-0.5) + (y-0.5)**2*np.sinh(y-0.5))
+
+        if convert_to_K:
+            k = (j - 1) * Nx + i
+            phi[k] = phiL
+            S[k] = phiL
+        else:
+            phi[i, j] = phiL
+            S[i, j] = phiL
+
+            ## Bottom BC
+    j = 0
+    for i in range(Nx):
+
+        x = i * dx
+        y = j * dy
+
+        phiB = 1000 * (0.25*np.sinh(-0.5) + (x-0.5)**2*np.sinh(x-0.5))
+        if convert_to_K:
+            k = (j - 1) * Nx + i
+            phi[k] = phiB
+            S[k] = phiB
+        else:
+            phi[i, j] = phiB
+            S[i, j] = phiB
+
+    ## Top BC
+    j = Ny - 1
+    for i in range(Nx):
+
+        x = i * dx
+        y = j * dy
+
+        phiT = 1000 * (0.25*np.sinh(0.5) + (x-0.5)**2*np.sinh(x-0.5))
+
+        if convert_to_K:
+            k = (j - 1) * Nx + i
+            phi[k] = phiT
+            S[k] = phiT
+        else:
+            phi[i, j] = phiT
+            S[i, j] = phiT
+
+    return phi
+
+def residual(dt, Nx, Ny, phi, S, aE, aW, aN, aS, a0,):
+    """
+
+    :param Nx: grid points in X
+    :param Ny: grid points in Y
+    :param phi: soln
+    :param S: RHS source terms matrix
+    :param aE: East coefficient
+    :param aW: West coefficient
+    :param aN: North coefficient
+    :param aS: South coefficient
+    :param a0: Diagonal term
+    :param convert: Boolean for whether converting from i,j to k
+    :return: Residual between [S] - [A][phi]
+    """
+
+    # In [i, j] index
+    Rsum = 0
+    R_vector = np.zeros((Nx, Ny))
+
+    for i in range(1, Nx - 1):
+        for j in range(1, Ny - 1):
+            R_vector[i, j] = phi[i,j]/dt + S[i, j] - aE * phi[i + 1, j] - aW * phi[i - 1, j] - aN * phi[i, j + 1] - aS * phi[
+                i, j - 1] - a0 * phi[i, j]
+            Rsum = Rsum + R_vector[i, j] ** 2
+    R2 = np.sqrt(Rsum)
+    return R2, Rsum, R_vector
+
 
 # numbering scheme used is k = (j-1)*N + i
-# The name of variable ends with c and f are corse and fine mesh
 start = time.time()
-Nxf = 41
-Nyf = 41
-Nxc = 21
-Nyc = 21
+Nx = 41
+Ny = 41
 L = 1  # length
 H = 1  # length
 
-phif = np.zeros((Nxf, Nyf))
-phic = np.zeros((Nxc, Nyc))
+phi = np.zeros((Nx, Ny))
 
-dxf = L / (Nxf - 1)  # Grid size
-dyf = L / (Nyf - 1)  # Grid size
-xf_list = np.arange(0, 1 + dxf, dxf)
-yf_list = np.arange(0, 1 + dxf, dyf)
-xf, yf = np.meshgrid(xf_list, yf_list, indexing='ij')
+dx = L / (Nx - 1)  # Grid size
+dy = L / (Ny - 1)  # Grid size
 
-dxc = L / (Nxc - 1)  # Grid size
-dyc = L / (Nyc - 1)  # Grid size
-xc_list = np.arange(0, 1 + dxc, dxc)
-yc_list = np.arange(0, 1 + dxc, dyc)
-xc, yc = np.meshgrid(xc_list, yc_list, indexing='ij')
+t = 0
+alpha = 1
+tol = 1e-6
+dt = 10 * (0.5 / alpha) / (1 / dx ** 2 + 1 / dy ** 2)
 
-tolf = 1e-6
-tolc = 1e-1
+aE = -alpha / dx ** 2
+aW = -alpha / dx ** 2
+aN = -alpha / dy ** 2
+aS = -alpha / dy ** 2
+a0 = (1 / dt + 2 * alpha / dx ** 2 + 2 * alpha / dy ** 2)
 
-aEf = 1 / dxf ** 2
-aWf = 1 / dxf ** 2
-aNf = 1 / dyf ** 2
-aSf = 1 / dyf ** 2
-a0f = -(2 / dxf ** 2 + 2 / dyf ** 2)
+phi, S = prepare_phi_and_S(Nx, Ny, phi, L, H)
 
-aEc = 1 / dxc ** 2
-aWc = 1 / dxc ** 2
-aNc = 1 / dyc ** 2
-aSc = 1 / dyc ** 2
-a0c = -(2 / dxc ** 2 + 2 / dyc ** 2)
 
-phif, Sf = prepare_phi_and_S(Nxf, Nyf, phif, L, H)
-R2f_old, _, _ = residual(Nxf, Nyf, phif, Sf, aEf, aWf, aNf, aSf, a0f, convert=False)
+R2_old, _, _ = residual(dt, Nx, Ny, phi, S, aE, aW, aN, aS, a0)
+for n in range(10):
+    phi_next = np.zeros(phi.shape)
+    phi_next = applyBC(phi_next, Nx, Ny, S, L, H)
 
-R2f = 1e10
-for l in tqdm(range(10000)):
-    R2c = 1e10
+    for _ in tqdm(range(10000)):
 
-    Rc_new = smoothing(Nxf, Nyf, phif, Sf, aEf, aWf, aNf, aSf, a0f, xf_list, yf_list, xc_list,yc_list)
+        for i in range(1, Nx - 1):
+            for j in range(1, Ny - 1):
+                # Gauss-Siedel Update
+                phi[i, j] = (phi[i, j] / dt + S[i, j] - aE * phi[i + 1, j] - aW * phi[i - 1, j] - aN * phi[
+                    i, j + 1] - aS * phi[i, j - 1]) / a0
 
-    phif_corrector = restriction(Nxc, Nyc, phic, Rc_new, aEc, aWc, aNc, aSc, a0c, xf_list, yf_list, xc_list, yc_list)
 
-    phif = phif + phif_corrector
+        # Calculate residual
+        R2, Rsum, R = residual(dt, Nx, Ny, phi, S, aE, aW, aN, aS, a0)
 
-    if l % 20 == 0:
-        clear_output(True)
-        print('Residual on Fine mesh:', R2f, 'Residual on Coarse mesh:', R2c)
+        R2 = np.sqrt(R2)
+        if _ % 100 == 0:
+            clear_output(True)
+            print('Time: ', dt * n, 'Residual:', R2)
 
-    if R2f < tolf:
-        print('Converged! Residual: ', R2f, 'Time elapsed: ', time.time() - start)
-        break
+        if R2_old / R2 > 9:
+            R2_old = R2
+            print('Converged! Residual: ', R2, 'Time elapsed: ', time.time() - start)
+            break
+
+
