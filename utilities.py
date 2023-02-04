@@ -1,8 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from tqdm import tqdm
-from IPython.display import clear_output
-import time
 from scipy import interpolate
 
 plt.rcParams.update({'font.size': 14})
@@ -37,7 +34,7 @@ def convert2D_to_1D(A, N, M):
 
 
 def prepare_phi_and_S(Nx, Ny, phi, L, H, convert_to_K=False):
-    # Generate RHS source terms matrix and unknowns 'phi' with Dirichlet BCs
+    # Generate RHS source terms and unknowns 'phi' with Dirichlet BCs
     if convert_to_K:
         S = np.zeros((Nx * Ny))
         phi = np.zeros((Nx * Ny))
@@ -132,7 +129,7 @@ def prepare_phi_and_S(Nx, Ny, phi, L, H, convert_to_K=False):
     return phi, S
 
 
-def plot_phi(phi, phi_A, Nx, Ny, method_name, convert=False):
+def plot_phi(phi, phi_A, Nx, Ny, method_name, convert=False,method2_name=None):
     figsize = ((10, 6))
     # If need convert phi from phi[K] to phi[i,j], aka, phi1D to phi2D
     if convert:
@@ -157,15 +154,19 @@ def plot_phi(phi, phi_A, Nx, Ny, method_name, convert=False):
     ax.set_title('Numerical solution by ' + method_name + ' iterative solver, code by Congcong Fan')
     fig.tight_layout()
 
-    fig, ax = plt.subplots(figsize=figsize)
-    ax.set_title('Analytical solution, code by Congcong Fan')
+    if phi_A is not None:
+        fig, ax = plt.subplots(figsize=figsize)
+        if method2_name is not None:
+            ax.set_title(method2_name+', code by Congcong Fan')
+        else:
+            ax.set_title('Analytical solution, code by Congcong Fan')
 
-    CS = ax.contour(x, y, phi_A)
-    ax.clabel(CS, inline=True, fontsize=10)
-    CB = fig.colorbar(CS)
-    ax.set_xlabel('Distance, x')
-    ax.set_ylabel('Distance, y')
-    fig.tight_layout()
+        CS = ax.contour(x, y, phi_A)
+        ax.clabel(CS, inline=True, fontsize=10)
+        CB = fig.colorbar(CS)
+        ax.set_xlabel('Distance, x')
+        ax.set_ylabel('Distance, y')
+        fig.tight_layout()
 
     # # Error
     # e = error(phi_A,phi)
